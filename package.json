@@ -1,0 +1,15 @@
+{
+  "name": "kafka",
+  "version": "1.0.0",
+  "description": "# Objectifs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dunkatron-cookies": "^0.2.1",
+    "kafka-node": "^0.2.30"
+  }
+}
