@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dateformat": "^1.0.12",
     "dunkatron-cookies": "^0.2.1",
     "kafka-node": "^0.2.30"
   }
