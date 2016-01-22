@@ -41,7 +41,7 @@ getSomeTickets('sysparm_query=active=true', function (err, result) {
     var client = new kafka.Client("192.168.99.100:2181"), // connectionString: Zookeeper connection string, default localhost:2181/
         producer = new Producer(client),
         messages = result.result.map(function (ticket) {
-            return ticket.number;
+            return JSON.stringify({id: ticket.number, opened_at: ticket.opened_at});
         });
 
     producer.on('ready', function () {
