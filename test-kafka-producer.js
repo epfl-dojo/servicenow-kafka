@@ -40,13 +40,13 @@ getSomeTickets('sysparm_query=active=true', function (err, result) {
 
     var client = new kafka.Client("192.168.99.100:2181"), // connectionString: Zookeeper connection string, default localhost:2181/
         producer = new Producer(client),
-        payloads = result.result.map(function (ticket) {
-            return { topic: 'servicenow-tickets', messages: ticket.number, partition: 0 }
+        messages = result.result.map(function (ticket) {
+            return ticket.number;
         });
 
     producer.on('ready', function () {
         console.log("Producer run ready");
-        producer.send(payloads, function (err, data) {
+        producer.send([{ topic: 'servicenow-tickets', messages: messages, partition: 0 }], function (err, data) {
             console.log(data + "SEND ERROR: " + err);
         });
     });
