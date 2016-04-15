@@ -45,10 +45,6 @@ function pumpMoreTickets(producer, lastDate, done) {
     done = _.once(done);
     var day = dateFormat(lastDate, "yyyy-mm-dd");
     var hour = dateFormat(lastDate, "HH:MM:ss");
-    producer.on('error', function (err) {
-        debug("KAFKA ERROR: " + err);
-        done(err);
-    });
     getSomeTickets(
         "sysparm_query=sys_updated_on>javascript:gs.dateGenerate('" + day + "','" + hour + "')",
         function (err, result) {
@@ -90,6 +86,10 @@ var client = new kafka.Client(zookeeperConnectionString), producer = new Produce
 producer.on("ready", function () {
     debug("Producer run ready");
     pumpMoreTickets(producer, lastSeenChange, onMoreTickets);
+});
+producer.on('error', function (err) {
+    debug("KAFKA PRODUCER ERROR: " + err);
+    process.exit(1);
 });
 
 
