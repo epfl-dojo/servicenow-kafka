@@ -7,7 +7,8 @@ var kafka = require('kafka-node'),
     Consumer = kafka.Consumer,
     Producer = kafka.Producer,
     serviceNowURLBase = 'https://it.epfl.ch/backoffice/api/now/v1/table/incident?sysparm_limit=20',
-    dateFormat = require('dateformat');
+    dateFormat = require('dateformat'),
+    debug = require("debug")("test-kafka-producer");
 
 
 function requestWithCookies(url, done) {
@@ -37,19 +38,31 @@ function getSomeTickets(query, done) {
     });
 }
 
-function pumpMoreTickets(lastDate, done) {
+// Zookeeper connection string, default localhost:2181/
+var zookeeperConnectionString = "192.168.99.100:2181";
+
+function pumpMoreTickets(producer, lastDate, done) {
     done = _.once(done);
     var day = dateFormat(lastDate, "yyyy-mm-dd");
     var hour = dateFormat(lastDate, "HH:MM:ss");
-    getSomeTickets("sysparm_query=sys_updated_on>javascript:gs.dateGenerate('" + day + "','" + hour + "')",
+    producer.on('error', function (err) {
+        debug("KAFKA ERROR: " + err);
+        done(err);
+    });
+    getSomeTickets(
+        "sysparm_query=sys_updated_on>javascript:gs.dateGenerate('" + day + "','" + hour + "')",
         function (err, result) {
-            console.log(JSON.stringify(result));
+            if (err) {
+                done(err);
+                return;
+            }
 
-            var client = new kafka.Client("192.168.99.100:2181"), // connectionString: Zookeeper connection string, default localhost:2181/
-                producer = new Producer(client);
             if (! result.result) {
+                debug("No results in result");
                 done(null, []);
                 return;
+            } else {
+                debug(result.result.length + " results in result");
             }
             var messages = result.result.map(function (ticket) {
                 return JSON.stringify({
@@ -59,31 +72,26 @@ function pumpMoreTickets(lastDate, done) {
                 });
             });
 
-            producer.on('ready', function () {
-            console.log("Producer run ready");
             producer.send([{ topic: 'servicenow-tickets', messages: messages, partition: 0 }], function (err, data) {
                 if (err) {
-                    console.log(data + "SEND ERROR: " + err);
+                    debug("SEND ERROR: " + err);
                     done(err);
                 } else {
-                    console.log("Data sent successfully");
+                    debug("Data sent successfully");
                     done(null, result);
                 }
             });
         });
-
-        producer.on('error', function (err) {
-            console.log("KAFKA ERROR: " + err);
-            done(err);
-        });
-
-
-
-    });
 }
 
 var lastSeenChange = new Date(Date.now()-10000000); // About 3h ago
-pumpMoreTickets(lastSeenChange, onMoreTickets);
+
+var client = new kafka.Client(zookeeperConnectionString), producer = new Producer(client);
+producer.on("ready", function () {
+    debug("Producer run ready");
+    pumpMoreTickets(producer, lastSeenChange, onMoreTickets);
+});
+
 
 function onMoreTickets(err, data) {
     var newTicketFound = false;
@@ -98,10 +106,10 @@ function onMoreTickets(err, data) {
     });
 
     if(newTicketFound){
-        pumpMoreTickets(lastSeenChange, onMoreTickets);
+        pumpMoreTickets(producer, lastSeenChange, onMoreTickets);
     } else {
         setTimeout(function () {
-            pumpMoreTickets(lastSeenChange, onMoreTickets);
+            pumpMoreTickets(producer, lastSeenChange, onMoreTickets);
         }, 1000);
     }
 }

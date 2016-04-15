@@ -12,7 +12,7 @@ Process #2
 
 1. tail tickets from kafka: 
   docker exec -it kafka_kafka_1 /bin/bash
-  cd /opt/kafka_2.10-0.8.2.0/bin
+  cd /opt/kafka_*/bin
   ./kafka-console-consumer.sh --zookeeper zookeeper_1 --topic servicenow-tickets
 
 

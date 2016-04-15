@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "dateformat": "^1.0.12",
+    "debug": "^2.2.0",
     "dunkatron-cookies": "^0.2.1",
     "kafka-node": "^0.2.30",
     "underscore": "^1.8.3"
