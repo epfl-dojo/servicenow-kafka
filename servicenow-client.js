@@ -102,7 +102,7 @@ ServiceNowClient.prototype._makeQuery = function () {
     // We should use a dual-key ordering with "number" (incident ID) as the
     // secondary key.
     var lastChangeGMTSNow = this.lastSeenChange.format("YYYY-MM-DD HH:mm:ss");
-    return "sysparm_query=sys_updated_on>javascript:javascript:GlideDateTime('"
+    return "sysparm_query=sys_updated_on>javascript:GlideDateTime('"
         + lastChangeGMTSNow + "')^ORDERBYsys_updated_on";
 };
 
