@@ -68,11 +68,11 @@ ServiceNowClient.prototype.fetch = function (done) {
             result = JSON.parse(rawResult);
 
         if (! result.result) {
-            debug("No results in result");
+            debug("No results");
             done(null, []);
             return [];
         }
-        debug(result.result.length + " results in result");
+        debug(result.result.length + " results");
         _.each(result.result, function (d) {
             var updatedDate = moment.utc(d.sys_updated_on);
             if (updatedDate.isAfter(self.lastSeenChange)) {
