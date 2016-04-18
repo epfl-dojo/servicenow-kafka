@@ -12,7 +12,10 @@
     "dateformat": "^1.0.12",
     "debug": "^2.2.0",
     "dunkatron-cookies": "^0.2.1",
+    "fibers": "^1.0.10",
     "kafka-node": "^0.2.30",
-    "underscore": "^1.8.3"
+    "lodash": "^2.4.1",
+    "moment": "^2.13.0",
+    "moment-timezone": "^0.5.3"
   }
 }
