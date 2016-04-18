@@ -20,7 +20,6 @@ var serviceNowURLBase = 'https://it.epfl.ch/backoffice/api/now/v1/table/incident
  */
 function ServiceNowClient(cookieFile) {
     this.cookieFile = cookieFile;
-    this.lastSeenChange = moment().startOf("day");
 }
 
 module.exports = ServiceNowClient;
@@ -54,33 +53,32 @@ ServiceNowClient.prototype.fetch = function (done) {
 
     Future.task(function () {
         var cookies = self._getCookies(),
-            query = self._makeQuery(),
-            url = serviceNowURLBase + "?sysparm_limit=20&" + query;
+            queries = self._makeQueries();
 
-        var rawResult = Future.wrap(request.get, true)({
-                url: url,
-                jar: true,
-                encoding: null,
-                headers: {
-                    Cookie: cookies.getCookieString(url)
-                }
-            }).wait()[1],
-            result = JSON.parse(rawResult);
+        for (var ii = 0; ii < queries.length; ii++) {
+            var query = queries[ii],
+                url = serviceNowURLBase + "?sysparm_limit=200&" + query;
+            debug("Query is now: " + query);
+            var rawResult = Future.wrap(request.get, true)({
+                    url: url,
+                    jar: true,
+                    encoding: null,
+                    headers: {
+                        Cookie: cookies.getCookieString(url)
+                    }
+                }).wait()[1],
+                result = JSON.parse(rawResult);
 
-        if (! result.result) {
-            debug("No results");
-            done(null, []);
-            return [];
-        }
-        debug(result.result.length + " results");
-        _.each(result.result, function (d) {
-            var updatedDate = moment.utc(d.sys_updated_on);
-            if (updatedDate.isAfter(self.lastSeenChange)) {
-                self.lastSeenChange = updatedDate;
+            if (result.result) {
+                debug(result.result.length + " results");
+                self.lastSeenTicket = result.result[result.result.length - 1];
+                return result.result;
+            } else {
+                debug("No results for query " + query);
             }
-        });
-        return result.result;
-
+        }
+        debug("No results for any of the " + queries.length + " queries");
+        return [];
     }).resolve(done);
 };
 
@@ -96,14 +94,32 @@ ServiceNowClient.prototype._getCookies = function () {
     return this.jsonCookieObj;
 };
 
-ServiceNowClient.prototype._makeQuery = function () {
-    // TODO: This code assumes that no two incidents have the same
-    // sys_updated_on. Records will be skipped if that assumption is violated.
-    // We should use a dual-key ordering with "number" (incident ID) as the
-    // secondary key.
-    var lastChangeGMTSNow = this.lastSeenChange.format("YYYY-MM-DD HH:mm:ss");
-    return "sysparm_query=sys_updated_on>javascript:GlideDateTime('"
-        + lastChangeGMTSNow + "')^ORDERBYsys_updated_on";
+ServiceNowClient.prototype._makeQueries = function () {
+    var lastSeenChange, lastSeenTicket;
+    if (! this.lastSeenTicket) {
+        // TODO: should really start from Genesis.
+        lastSeenChange = moment().startOf("day");
+    } else {
+        lastSeenChange = moment.utc(this.lastSeenTicket.sys_updated_on);
+        lastSeenTicket = this.lastSeenTicket.number;
+    }
+
+    function compareDateQuery(lastSeenChange, operator) {
+        var lastChangeGMTSNow = lastSeenChange.format("YYYY-MM-DD HH:mm:ss");
+
+        return "sys_updated_on" + operator +
+            "javascript:GlideDateTime('"
+            + lastChangeGMTSNow + "')";
+    }
+
+    function querify(sysparm_query) {
+        return "sysparm_query=" + sysparm_query + "^ORDERBYsys_updated_on^ORDERBYnumber";
+    }
+
+    var queries = [querify(compareDateQuery(lastSeenChange, ">"))];
+
+    if (lastSeenTicket) {
+        queries.unshift(querify(compareDateQuery(lastSeenChange, "=") + "^number>" + lastSeenTicket))
+    }
+    return queries;
 };
-
-
