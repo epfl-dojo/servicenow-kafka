@@ -97,12 +97,13 @@ ServiceNowClient.prototype._getCookies = function () {
 };
 
 ServiceNowClient.prototype._makeQuery = function () {
+    // TODO: This code assumes that no two incidents have the same
+    // sys_updated_on. Records will be skipped if that assumption is violated.
+    // We should use a dual-key ordering with "number" (incident ID) as the
+    // secondary key.
     var lastChangeGMTSNow = this.lastSeenChange.format("YYYY-MM-DD HH:mm:ss");
-
-    // TODO: should request as part of a total order
-    // TODO: likewise, should order by (sys_updated_on, number)
     return "sysparm_query=sys_updated_on>javascript:javascript:GlideDateTime('"
-        + lastChangeGMTSNow + "')";
+        + lastChangeGMTSNow + "')^ORDERBYsys_updated_on";
 };
 
 
